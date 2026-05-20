@@ -14,6 +14,22 @@ def get_database():
 def create_collections_and_indexes():
     db = get_database()
 
+    existing = db.list_collection_names()
+    collections = [
+        "users",
+        "players",
+        "matches",
+        "player_stats",
+        "lineups",
+        "scores",
+        "matchdays",
+    ]
+
+    for collection in collections:
+        if collection in existing:
+            db.drop_collection(collection)
+            print(f"Dropped existing: {collection}")
+
     # Users collection
     db.create_collection(
         "users",
@@ -106,9 +122,11 @@ def create_collections_and_indexes():
                         "bsonType": "string",
                         "enum": [
                             "group",
+                            "round_of_32",
                             "round_of_16",
                             "quarter_final",
                             "semi_final",
+                            "third_place",
                             "final",
                         ],
                     },
@@ -231,21 +249,23 @@ def create_collections_and_indexes():
         validator={
             "$jsonSchema": {
                 "bsonType": "object",
-                "required": ["matchday_number", "stage", "deadline", "status"],
+                "required": ["matchday_number", "stage", "status"],
                 "properties": {
                     "matchday_number": {"bsonType": "int"},
                     "stage": {
                         "bsonType": "string",
                         "enum": [
                             "group",
+                            "round_of_32",
                             "round_of_16",
                             "quarter_final",
                             "semi_final",
+                            "third_place",
                             "final",
                         ],
                     },
                     "deadline": {
-                        "bsonType": "date",
+                        "bsonType": ["date", "null"],
                         "description": "Transfer deadline before matchday starts",
                     },
                     "status": {
