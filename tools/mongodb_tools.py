@@ -155,6 +155,135 @@ def get_lineup(user_id: str, matchday: int) -> dict:
 
     return {"lineup": lineup}
 
+def get_player_stats(player_name: str = None, limit: int = 10) -> dict:
+    """Get player match statistics from the database.
+    
+    Args:
+        player_name: Filter by player name. Optional.
+        limit: Maximum number of records to return. Default 10.
+    
+    Returns:
+        Dictionary with player stats aggregated across matches.
+    """
+    db = get_db()
+    pipeline = []
+
+    if player_name:
+        pipeline.append({"$match": {"player_name": {"$regex": player_name, "$options": "i"}}})
+
+    pipeline += [
+        {
+            "$group": {
+                "_id": "$player_name",
+                "total_points": {"$sum": "$fantasy_points"},
+                "total_goals": {"$sum": "$goals"},
+                "total_assists": {"$sum": "$assists"},
+                "total_minutes": {"$sum": "$minutes_played"},
+                "yellow_cards": {"$sum": "$yellow_cards"},
+                "red_cards": {"$sum": "$red_cards"},
+                "matches_played": {"$sum": 1}
+            }
+        },
+        {"$sort": {"total_points": -1}},
+        {"$limit": limit}
+    ]
+
+    results = list(db.player_stats.aggregate(pipeline))
+    for r in results:
+        r["player_name"] = r.pop("_id")
+
+    return {"stats": results, "count": len(results)}
+
+def recommend_lineup(user_id: str, matchday: int) -> dict:
+    """Generate an optimal fantasy lineup recommendation based on player performance.
+    
+    Args:
+        user_id: The user's identifier.
+        matchday: The matchday number to recommend for.
+    
+    Returns:
+        Dictionary with recommended starters, bench, and reasoning.
+    """
+    db = get_db()
+
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$api_player_id",
+                "player_name": {"$first": "$player_name"},
+                "total_points": {"$sum": "$fantasy_points"},
+                "total_goals": {"$sum": "$goals"},
+                "total_assists": {"$sum": "$assists"},
+                "matches_played": {"$sum": 1},
+                "yellow_cards": {"$sum": "$yellow_cards"},
+                "red_cards": {"$sum": "$red_cards"}
+            }
+        },
+        {"$sort": {"total_points": -1}}
+    ]
+
+    all_stats = list(db.player_stats.aggregate(pipeline))
+
+    player_ids = [s["_id"] for s in all_stats]
+    players_map = {}
+
+    for p in db.players.find({"api_id": {"$in": player_ids}}):
+        players_map[p["api_id"]] = p
+
+    by_position = {"GK": [], "DEF": [], "MID": [], "FWD": []}
+
+    for stat in all_stats:
+        player = players_map.get(stat["_id"])
+        if not player:
+            continue
+        position = player.get("position", "MID")
+        if position in by_position:
+            by_position[position].append({
+                "name": stat["player_name"],
+                "position": position,
+                "total_points": stat["total_points"],
+                "goals": stat["total_goals"],
+                "assists": stat["total_assists"],
+                "matches": stat["matches_played"],
+                "yellow_cards": stat["yellow_cards"],
+                "red_cards": stat["red_cards"],
+                "nationality": player.get("nationality", "Unknown")
+            })
+
+    starters = []
+    bench = []
+
+    if by_position["GK"]:
+        starters.append(by_position["GK"][0])
+        if len(by_position["GK"]) > 1:
+            bench.append(by_position["GK"][1])
+
+    for defender in by_position["DEF"][:4]:
+        starters.append(defender)
+    if len(by_position["DEF"]) > 4:
+        bench.append(by_position["DEF"][4])
+
+    for midfielder in by_position["MID"][:3]:
+        starters.append(midfielder)
+    if len(by_position["MID"]) > 3:
+        bench.append(by_position["MID"][3])
+
+    for forward in by_position["FWD"][:3]:
+        starters.append(forward)
+    if len(by_position["FWD"]) > 3:
+        bench.append(by_position["FWD"][3])
+
+    return {
+        "matchday": matchday,
+        "formation": "4-3-3",
+        "starters": starters,
+        "bench": bench,
+        "total_starters": len(starters),
+        "note": "Ranked by total fantasy points across all 2022 World Cup matches"
+    }
+
+get_player_stats_tool = FunctionTool(get_player_stats)
+recommend_lineup_tool = FunctionTool(recommend_lineup)
 
 get_players_tool = FunctionTool(get_players)
 get_top_scorers_tool = FunctionTool(get_top_scorers)

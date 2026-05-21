@@ -14,7 +14,9 @@ from tools.mongodb_tools import (
     get_matches_tool,
     get_matchdays_tool,
     save_lineup_tool,
-    get_lineup_tool
+    get_lineup_tool,
+    get_player_stats_tool,
+    recommend_lineup_tool
 )
 
 def create_agent():
@@ -42,7 +44,9 @@ def create_agent():
             get_matches_tool,
             get_matchdays_tool,
             save_lineup_tool,
-            get_lineup_tool
+            get_lineup_tool,
+            get_player_stats_tool,
+            recommend_lineup_tool
         ]
     )
     return agent
