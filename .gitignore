@@ -50,3 +50,6 @@ logs/
 
 # ADK
 .adk/
+
+# MCP config
+mcp_config.json
