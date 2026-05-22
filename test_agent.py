@@ -22,10 +22,7 @@ async def test():
 
     message = Content(
         role="user",
-        parts=
-        [Part(
-            text="Recommend me an optimal fantasy lineup for matchday 1. Explain your reasoning for each player."
-            )]
+        parts=[Part(text="Suggest a transfer for user 'luan' matchday 1, then recommend a captain, then compare Mbappe vs Messi, then show me the top 5 in-form players.")]
     )
 
     print("Sending message...")
