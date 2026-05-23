@@ -23,6 +23,12 @@ from tools.mongodb_tools import (
     get_form_analysis_tool,
 )
 
+from tools.prediction_engine import (
+    get_team_stats_tool,
+    predict_match_tool,
+    get_tournament_standings_tool
+)
+
 def create_agent():
     agent = Agent(
         model="gemini-2.5-flash",
@@ -46,6 +52,9 @@ def create_agent():
         - recommend_captain: pick best captain from current lineup
         - compare_players: head to head comparison of two players
         - get_form_analysis: rank players by recent weighted performance
+        - get_team_stats: analyze a team's attack, defense, and win rate
+        - predict_match: predict outcome between two teams with probabilities
+        - get_tournament_standings: get overall tournament table
 
         CRITICAL RULES:
         1. ALWAYS call the appropriate tool before answering any question about players, 
@@ -85,7 +94,10 @@ def create_agent():
             suggest_transfer_tool,
             recommend_captain_tool,
             compare_players_tool,
-            get_form_analysis_tool
+            get_form_analysis_tool,
+            get_team_stats_tool,
+            predict_match_tool,
+            get_tournament_standings_tool,
         ]
     )
     return agent
