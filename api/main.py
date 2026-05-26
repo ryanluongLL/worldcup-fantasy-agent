@@ -1,16 +1,24 @@
 import os
 from dotenv import load_dotenv
 
+import json
+import tempfile
+
 load_dotenv()
 
-gemini_api_key = os.getenv("GEMINI_API_KEY")
-if gemini_api_key:
-    os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "false"
-    os.environ["GOOGLE_API_KEY"] = gemini_api_key
-else:
-    os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("GOOGLE_CLOUD_PROJECT", "fluid-booking-496802-d8")
-    os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv("GOOGLE_CLOUD_LOCATION", "us-east4")
-    os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
+credentials_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+if credentials_json:
+    try:
+        creds_dict = json.loads(credentials_json)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(creds_dict, f)
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = f.name
+    except Exception as e:
+        print(f"Failed to load credentials: {e}")
+
+os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
+os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("GOOGLE_CLOUD_PROJECT", "fluid-booking-496802-d8")
+os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv("GOOGLE_CLOUD_LOCATION", "us-east4")
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
