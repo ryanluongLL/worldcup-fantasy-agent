@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Trophy, TrendingUp, Users, Zap, Star } from "lucide-react";
 
+const RAILWAY_URL = "https://worldcup-fantasy-agent-production.up.railway.app";
+
 const DEMO_LINEUP = {
   GK: [{ name: "S. Gonda", nationality: "JPN", points: 8 }],
   DEF: [
@@ -53,7 +55,14 @@ const nationalityToCode: Record<string, string> = {
   "Brazil": "br", "Spain": "es", "Portugal": "pt", "Netherlands": "nl",
 };
 
-function PlayerCard({ player, position}: {
+function renderMarkdown(text: string) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+    .replace(/\n/g, "<br/>");
+}
+
+function PlayerCard({ player, position }: {
   player: { name: string; nationality: string; points: number; photo?: string };
   position: string;
 }) {
@@ -88,22 +97,20 @@ function PlayerCard({ player, position}: {
       </div>
 
       {tooltip && (
-        <div
-          style={{
-            position: "fixed",
-            left: `${tooltip.x}px`,
-            top: `${tooltip.y - 8}px`,
-            transform: "translate(-50%, -100%)",
-            zIndex: 9999,
-            backgroundColor: "var(--card-bg)",
-            border: `2px solid ${positionColors[position]}`,
-            borderRadius: "12px",
-            padding: "12px",
-            width: "140px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-            pointerEvents: "none",
-          }}
-        >
+        <div style={{
+          position: "fixed",
+          left: `${tooltip.x}px`,
+          top: `${tooltip.y - 8}px`,
+          transform: "translate(-50%, -100%)",
+          zIndex: 9999,
+          backgroundColor: "var(--card-bg)",
+          border: `2px solid ${positionColors[position]}`,
+          borderRadius: "12px",
+          padding: "12px",
+          width: "140px",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+          pointerEvents: "none",
+        }}>
           <div style={{
             height: "4px",
             borderRadius: "10px 10px 0 0",
@@ -153,11 +160,7 @@ function PlayerCard({ player, position}: {
             <span style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.65rem", fontFamily: "DM Sans, sans-serif" }}>
               Fantasy pts
             </span>
-            <span style={{
-              color: "white",
-              fontFamily: "Bebas Neue, sans-serif",
-              fontSize: "1.1rem"
-            }}>
+            <span style={{ color: "white", fontFamily: "Bebas Neue, sans-serif", fontSize: "1.1rem" }}>
               {player.points}
             </span>
           </div>
@@ -167,24 +170,23 @@ function PlayerCard({ player, position}: {
   );
 }
 
-function PitchView({ playersMap, agentLineup }: { 
+function PitchView({ playersMap, agentLineup, playerPositionMap, playerNationalityMap }: {
   playersMap: Record<string, string>;
   agentLineup: any;
+  playerPositionMap: Record<string, string>;
+  playerNationalityMap: Record<string, string>;
 }) {
   const getLineup = () => {
     if (!agentLineup || !agentLineup.starters) return DEMO_LINEUP;
-    
-    const starters = agentLineup.starters;
+
+    const starters = agentLineup.starters as string[];
     const byPosition: Record<string, any[]> = { GK: [], DEF: [], MID: [], FWD: [] };
-    
-    starters.forEach((p: any) => {
-      const name = typeof p === "string" ? p : p.name;
-      const position = typeof p === "object" ? p.position : "MID";
-      const points = typeof p === "object" ? p.total_points || 0 : 0;
-      const nationality = typeof p === "object" ? p.nationality || "?" : "?";
-      
+
+    starters.forEach((name: string) => {
+      const position = playerPositionMap[name] || "MID";
+      const nationality = playerNationalityMap[name] || "?";
       if (byPosition[position]) {
-        byPosition[position].push({ name, nationality, points });
+        byPosition[position].push({ name, nationality, points: 0 });
       }
     });
 
@@ -226,17 +228,17 @@ function PitchView({ playersMap, agentLineup }: {
       )}
       <div className="pitch-row">
         {lineup.FWD.map((p, i) => (
-          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="FWD"/>
+          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="FWD" />
         ))}
       </div>
       <div className="pitch-row">
         {lineup.MID.map((p, i) => (
-          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="MID"/>
+          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="MID" />
         ))}
       </div>
       <div className="pitch-row">
         {lineup.DEF.map((p, i) => (
-          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="DEF"/>
+          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="DEF" />
         ))}
       </div>
       <div className="pitch-row">
@@ -264,7 +266,7 @@ function AgentChat({ onLineupUpdate }: { onLineupUpdate: (lineup: any) => void }
     setLoading(true);
 
     try {
-      const response = await fetch("https://worldcup-fantasy-agent-production.up.railway.app/chat", {
+      const response = await fetch(`${RAILWAY_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMsg, user_id: "default_user" }),
@@ -295,9 +297,8 @@ function AgentChat({ onLineupUpdate }: { onLineupUpdate: (lineup: any) => void }
           <div key={i} className={`message ${msg.role}`}>
             <div
               className="bubble"
-              dangerouslySetInnerHTML={{__html: renderMarkdown(msg.text)}}
-            >
-            </div>
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }}
+            />
           </div>
         ))}
         {loading && (
@@ -325,11 +326,14 @@ export default function Home() {
   const [topPerformers, setTopPerformers] = useState(TOP_PERFORMERS);
   const [loadingData, setLoadingData] = useState(true);
   const [agentLineup, setAgentLineup] = useState<any>(null);
+  const [playersMap, setPlayersMap] = useState<Record<string, string>>({});
+  const [playerPositionMap, setPlayerPositionMap] = useState<Record<string, string>>({});
+  const [playerNationalityMap, setPlayerNationalityMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("https://worldcup-fantasy-agent-production.up.railway.app/top-performers");
+        const response = await fetch(`${RAILWAY_URL}/top-performers`);
         const data = await response.json();
         if (data.stats && data.stats.length > 0) {
           const mapped = data.stats.slice(0, 5).map((p: any) => ({
@@ -350,38 +354,32 @@ export default function Home() {
     fetchData();
   }, []);
 
-  const [lineup, setLineup] = useState<any>(null);
-  useEffect(() => {
-    const fetchLineup = async () => {
-      try {
-        const response = await fetch("https://worldcup-fantasy-agent-production.up.railway.app/lineup/luan?matchday=1");
-        const data = await response.json();
-        if (data.lineup) {
-          setLineup(data.lineup);
-        }
-      } catch {
-        console.log("Using demo lineup");
-      }
-    };
-    fetchLineup();
-  }, []);
-
-  const [playersMap, setPlayersMap] = useState<Record<string, string>>({});
-
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
-        const response = await fetch("https://worldcup-fantasy-agent-production.up.railway.app/players");
+        const response = await fetch(`${RAILWAY_URL}/players`);
         const data = await response.json();
         if (data.players) {
-          const map: Record<string, string> = {};
+          const photoMap: Record<string, string> = {};
+          const positionMap: Record<string, string> = {};
+          const nationalityMap: Record<string, string> = {};
           data.players.forEach((p: any) => {
-            map[p.name] = p.photo;
+            photoMap[p.name] = p.photo;
+            positionMap[p.name] = p.position;
+            nationalityMap[p.name] = p.nationality;
+            if (p.firstname && p.lastname) {
+              const fullName = `${p.firstname} ${p.lastname}`;
+              photoMap[fullName] = p.photo;
+              positionMap[fullName] = p.position;
+              nationalityMap[fullName] = p.nationality;
+            }
           });
-          setPlayersMap(map);
+          setPlayersMap(photoMap);
+          setPlayerPositionMap(positionMap);
+          setPlayerNationalityMap(nationalityMap);
         }
       } catch {
-        console.log("Could not load player photos");
+        console.log("Could not load player data");
       }
     };
     fetchPlayers();
@@ -447,7 +445,12 @@ export default function Home() {
                 <h2 className="section-title">MY SQUAD</h2>
                 <span className="section-sub">Matchday 1 · 4-3-3</span>
               </div>
-              <PitchView playersMap={playersMap} agentLineup={agentLineup} />
+              <PitchView
+                playersMap={playersMap}
+                agentLineup={agentLineup}
+                playerPositionMap={playerPositionMap}
+                playerNationalityMap={playerNationalityMap}
+              />
             </div>
             <div className="chat-section">
               <h2 className="section-title" style={{ marginBottom: "1rem" }}>COACH AI</h2>
@@ -467,31 +470,31 @@ export default function Home() {
               </div>
             ) : (
               <div className="performers-grid">
-              {topPerformers.map((player, i) => (
-                <div key={i} className="performer-card">
-                  <div className="performer-top">
-                    <div>
-                      <p className="performer-name">{player.name}</p>
-                      <p className="performer-team">{player.team}</p>
+                {topPerformers.map((player, i) => (
+                  <div key={i} className="performer-card">
+                    <div className="performer-top">
+                      <div>
+                        <p className="performer-name">{player.name}</p>
+                        <p className="performer-team">{player.team}</p>
+                      </div>
+                      <div className="points-badge">
+                        <span className="points-num">{player.points}</span>
+                        <span className="points-label">pts</span>
+                      </div>
                     </div>
-                    <div className="points-badge">
-                      <span className="points-num">{player.points}</span>
-                      <span className="points-label">pts</span>
+                    <div className="performer-stats">
+                      <div>
+                        <p className="stat-num red">{player.goals}</p>
+                        <p className="stat-label">Goals</p>
+                      </div>
+                      <div>
+                        <p className="stat-num gold">{player.assists}</p>
+                        <p className="stat-label">Assists</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="performer-stats">
-                    <div>
-                      <p className="stat-num red">{player.goals}</p>
-                      <p className="stat-label">Goals</p>
-                    </div>
-                    <div>
-                      <p className="stat-num gold">{player.assists}</p>
-                      <p className="stat-label">Assists</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>  
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -514,11 +517,4 @@ export default function Home() {
       </main>
     </div>
   );
-}
-
-function renderMarkdown(text: string) {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/\n/g, '<br/>');
 }
