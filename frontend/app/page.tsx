@@ -216,9 +216,9 @@ function AgentChat() {
     setInput("");
     setMessages((prev) => [...prev, { role: "user", text: userMsg }]);
     setLoading(true);
-    
+
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch("https://worldcup-fantasy-agent-production.up.railway.app/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMsg, user_id: "default_user" }),
@@ -228,7 +228,7 @@ function AgentChat() {
     } catch {
       setMessages((prev) => [...prev, {
         role: "agent",
-        text: "Connection error. Make sure the Pitchside API is running",
+        text: "Connection error. The coach is taking too long to respond. Please try again.",
       }]);
     } finally {
       setLoading(false);
@@ -249,7 +249,7 @@ function AgentChat() {
         ))}
         {loading && (
           <div className="message agent">
-            <div className="bubble muted">Analyzing...</div>
+            <div className="bubble muted">Analyzing... (this may take 30-60 seconds)</div>
           </div>
         )}
       </div>
@@ -275,7 +275,7 @@ export default function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("/api/top-performers");
+        const response = await fetch("https://worldcup-fantasy-agent-production.up.railway.app/top-performers");
         const data = await response.json();
         if (data.stats && data.stats.length > 0) {
           const mapped = data.stats.slice(0, 5).map((p: any) => ({
@@ -301,7 +301,7 @@ export default function Home() {
   useEffect(() => {
     const fetchLineup = async () => {
       try {
-        const response = await fetch("/api/lineup/luan?matchday=1");
+        const response = await fetch("https://worldcup-fantasy-agent-production.up.railway.app/lineup/luan?matchday=1");
         const data = await response.json();
         if (data.lineup) {
           setLineup(data.lineup);
@@ -318,7 +318,7 @@ export default function Home() {
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
-        const response = await fetch("/api/players");
+        const response = await fetch("https://worldcup-fantasy-agent-production.up.railway.app/players");
         const data = await response.json();
         if (data.players) {
           const map: Record<string, string> = {};

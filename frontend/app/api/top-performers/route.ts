@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 
-export async function GET() {
-    const response = await fetch("http://localhost:8000/top-performers?limit=10");
-    const data = await response.json();
-    return NextResponse.json(data);
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+export async function GET() {
+  const response = await fetch(`${API_URL}/top-performers?limit=10`);
+  const data = await response.json();
+  return NextResponse.json(data);
+}
