@@ -19,13 +19,8 @@ app = FastAPI(title="Pitchside API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://pitchside-ten.vercel.app",
-        "https://pitchside-52yjyg4j2-ryanluonglls-projects.vercel.app",
-        "*"
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
