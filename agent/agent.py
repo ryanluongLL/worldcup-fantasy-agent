@@ -4,9 +4,14 @@ from google.adk.agents import Agent
 
 load_dotenv()
 
-os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("GOOGLE_CLOUD_PROJECT")
-os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv("GOOGLE_CLOUD_LOCATION", "us-east4")
-os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+if gemini_api_key:
+    os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "false"
+    os.environ["GOOGLE_API_KEY"] = gemini_api_key
+else:
+    os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("GOOGLE_CLOUD_PROJECT", "fluid-booking-496802-d8")
+    os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv("GOOGLE_CLOUD_LOCATION", "us-east4")
+    os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
 
 from tools.mongodb_tools import (
     get_players_tool,
