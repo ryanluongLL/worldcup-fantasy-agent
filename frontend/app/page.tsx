@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import { Trophy, TrendingUp, Users, Zap, Star } from "lucide-react";
 
-
-
 const DEMO_LINEUP = {
   GK: [{ name: "S. Gonda", nationality: "JPN", points: 8 }],
   DEF: [
@@ -169,7 +167,38 @@ function PlayerCard({ player, position}: {
   );
 }
 
-function PitchView({ playersMap }: { playersMap: Record<string, string> }) {
+function PitchView({ playersMap, agentLineup }: { 
+  playersMap: Record<string, string>;
+  agentLineup: any;
+}) {
+  const getLineup = () => {
+    if (!agentLineup || !agentLineup.starters) return DEMO_LINEUP;
+    
+    const starters = agentLineup.starters;
+    const byPosition: Record<string, any[]> = { GK: [], DEF: [], MID: [], FWD: [] };
+    
+    starters.forEach((p: any) => {
+      const name = typeof p === "string" ? p : p.name;
+      const position = typeof p === "object" ? p.position : "MID";
+      const points = typeof p === "object" ? p.total_points || 0 : 0;
+      const nationality = typeof p === "object" ? p.nationality || "?" : "?";
+      
+      if (byPosition[position]) {
+        byPosition[position].push({ name, nationality, points });
+      }
+    });
+
+    return {
+      GK: byPosition.GK.slice(0, 1),
+      DEF: byPosition.DEF.slice(0, 4),
+      MID: byPosition.MID.slice(0, 3),
+      FWD: byPosition.FWD.slice(0, 3),
+    };
+  };
+
+  const lineup = getLineup();
+  const isAgentLineup = !!agentLineup;
+
   return (
     <div className="pitch">
       <div className="pitch-markings">
@@ -178,32 +207,49 @@ function PitchView({ playersMap }: { playersMap: Record<string, string> }) {
         <div className="pitch-box top-box" />
         <div className="pitch-box bottom-box" />
       </div>
+      {isAgentLineup && (
+        <div style={{
+          position: "absolute",
+          top: "0.75rem",
+          left: "0.75rem",
+          padding: "0.25rem 0.5rem",
+          borderRadius: "4px",
+          backgroundColor: "rgba(201,150,58,0.9)",
+          color: "white",
+          fontFamily: "Bebas Neue, sans-serif",
+          fontSize: "0.7rem",
+          letterSpacing: "0.1em",
+          zIndex: 10
+        }}>
+          AI RECOMMENDED
+        </div>
+      )}
       <div className="pitch-row">
-        {DEMO_LINEUP.FWD.map((p, i) => (
+        {lineup.FWD.map((p, i) => (
           <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="FWD"/>
         ))}
       </div>
       <div className="pitch-row">
-        {DEMO_LINEUP.MID.map((p, i) => (
+        {lineup.MID.map((p, i) => (
           <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="MID"/>
         ))}
       </div>
       <div className="pitch-row">
-        {DEMO_LINEUP.DEF.map((p, i) => (
+        {lineup.DEF.map((p, i) => (
           <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="DEF"/>
         ))}
       </div>
       <div className="pitch-row">
-       {DEMO_LINEUP.GK.map((p, i) => (
-          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="GK"/>
+        {lineup.GK.map((p, i) => (
+          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="GK" />
         ))}
       </div>
-      <div className="formation-badge">4-3-3</div>
+      <div className="formation-badge">{agentLineup?.formation || "4-3-3"}</div>
     </div>
   );
 }
 
-function AgentChat() {
+function AgentChat({ onLineupUpdate }: { onLineupUpdate: (lineup: any) => void }) {
   const [messages, setMessages] = useState([
     { role: "agent", text: "Welcome to Pitchside. I'm your AI football coach. Ask me to recommend a lineup, suggest transfers, compare players, or predict match outcomes." },
   ]);
@@ -225,6 +271,9 @@ function AgentChat() {
       });
       const data = await response.json();
       setMessages((prev) => [...prev, { role: "agent", text: data.response }]);
+      if (data.lineup) {
+        onLineupUpdate(data.lineup);
+      }
     } catch {
       setMessages((prev) => [...prev, {
         role: "agent",
@@ -244,7 +293,11 @@ function AgentChat() {
       <div className="chat-messages">
         {messages.map((msg, i) => (
           <div key={i} className={`message ${msg.role}`}>
-            <div className="bubble">{msg.text}</div>
+            <div
+              className="bubble"
+              dangerouslySetInnerHTML={{__html: renderMarkdown(msg.text)}}
+            >
+            </div>
           </div>
         ))}
         {loading && (
@@ -271,6 +324,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("team");
   const [topPerformers, setTopPerformers] = useState(TOP_PERFORMERS);
   const [loadingData, setLoadingData] = useState(true);
+  const [agentLineup, setAgentLineup] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -297,7 +351,6 @@ export default function Home() {
   }, []);
 
   const [lineup, setLineup] = useState<any>(null);
-
   useEffect(() => {
     const fetchLineup = async () => {
       try {
@@ -394,11 +447,11 @@ export default function Home() {
                 <h2 className="section-title">MY SQUAD</h2>
                 <span className="section-sub">Matchday 1 · 4-3-3</span>
               </div>
-              <PitchView playersMap={playersMap} />
+              <PitchView playersMap={playersMap} agentLineup={agentLineup} />
             </div>
             <div className="chat-section">
               <h2 className="section-title" style={{ marginBottom: "1rem" }}>COACH AI</h2>
-              <AgentChat />
+              <AgentChat onLineupUpdate={setAgentLineup} />
             </div>
           </div>
         )}
@@ -461,4 +514,11 @@ export default function Home() {
       </main>
     </div>
   );
+}
+
+function renderMarkdown(text: string) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br/>');
 }

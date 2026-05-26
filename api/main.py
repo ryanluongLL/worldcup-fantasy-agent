@@ -58,7 +58,7 @@ class ChatResponse(BaseModel):
 def health():
     return {"status": "ok", "agent": "pitchside"}
 
-@app.post("/chat", response_model=ChatResponse)
+@app.post("/chat")
 async def chat(request: ChatRequest):
     user_id = request.user_id
 
@@ -87,9 +87,23 @@ async def chat(request: ChatRequest):
             for part in event.content.parts:
                 if hasattr(part, "text") and part.text:
                     response_text += part.text
+
+    # check if a lineup was saved during this interaction
+    from database.schema import get_database
+    db = get_database()
+    latest_lineup = db.lineups.find_one(
+        {"user_id": user_id},
+        {"_id": 0},
+        sort=[("matchday", -1)]
+    )
+
     return ChatResponse(
-        response=response_text or "I couldn't process that request. Please try again.",
-        session_id=session_id
+       content={
+            "response": response_text or "I couldn't process that request.",
+            "session_id": session_id,
+            "lineup": latest_lineup
+       },
+       headers={"Access-Control-Allow-Origin": "*"}
     )
 
 @app.get("/lineup/{user_id}")
