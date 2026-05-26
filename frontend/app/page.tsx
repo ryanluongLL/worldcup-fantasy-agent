@@ -269,7 +269,7 @@ function AgentChat({ onLineupUpdate }: { onLineupUpdate: (lineup: any) => void }
       const response = await fetch(`${RAILWAY_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg, user_id: "default_user" }),
+        body: JSON.stringify({ message: userMsg, user_id: "luan" }),
       });
       const data = await response.json();
       setMessages((prev) => [...prev, { role: "agent", text: data.response }]);
