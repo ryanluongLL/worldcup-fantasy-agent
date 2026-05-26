@@ -1,11 +1,4 @@
-import json
-import tempfile
 import os
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi import Request
-from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,6 +12,10 @@ else:
     os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv("GOOGLE_CLOUD_LOCATION", "us-east4")
     os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
 
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from google.adk.runners import InMemoryRunner
 from google.genai.types import Content, Part
 from agent.agent import root_agent

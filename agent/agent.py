@@ -1,9 +1,9 @@
 import os
 from dotenv import load_dotenv
-from google.adk.agents import Agent
 
 load_dotenv()
 
+# Set up auth before importing ADK
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 if gemini_api_key:
     os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "false"
@@ -13,6 +13,8 @@ else:
     os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv("GOOGLE_CLOUD_LOCATION", "us-east4")
     os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
 
+# Import ADK after env is set
+from google.adk.agents import Agent
 from tools.mongodb_tools import (
     get_players_tool,
     get_top_scorers_tool,
@@ -25,9 +27,8 @@ from tools.mongodb_tools import (
     suggest_transfer_tool,
     recommend_captain_tool,
     compare_players_tool,
-    get_form_analysis_tool,
+    get_form_analysis_tool
 )
-
 from tools.prediction_engine import (
     get_team_stats_tool,
     predict_match_tool,
