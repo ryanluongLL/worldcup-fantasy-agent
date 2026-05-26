@@ -97,7 +97,7 @@ async def chat(request: ChatRequest):
         sort=[("matchday", -1)]
     )
 
-    return ChatResponse(
+    return JSONResponse(
        content={
             "response": response_text or "I couldn't process that request.",
             "session_id": session_id,
@@ -142,4 +142,4 @@ async def get_players(position: str = None, limit: int = 60):
         "photo": 1,
         "club": 1
     }).limit(limit))
-    return {"playeres": players}
+    return {"players": players}
