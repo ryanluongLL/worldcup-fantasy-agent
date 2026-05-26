@@ -106,13 +106,23 @@ function AgentChat() {
     setInput("");
     setMessages((prev) => [...prev, { role: "user", text: userMsg }]);
     setLoading(true);
-    setTimeout(() => {
+    
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMsg, user_id: "default_user" }),
+      });
+      const data = await response.json();
+      setMessages((prev) => [...prev, { role: "agent", text: data.response }]);
+    } catch {
       setMessages((prev) => [...prev, {
         role: "agent",
-        text: "Analyzing your request using 2022 World Cup data. Backend integration coming soon.",
+        text: "Connection error. Make sure the Pitchside API is running",
       }]);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
