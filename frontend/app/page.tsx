@@ -1,25 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Trophy, TrendingUp, Users, Zap, Star } from "lucide-react";
 
+
+
 const DEMO_LINEUP = {
-  GK: [{ name: "Gonda", nationality: "JPN", points: 8 }],
+  GK: [{ name: "S. Gonda", nationality: "JPN", points: 8 }],
   DEF: [
-    { name: "Sabaly", nationality: "SEN", points: 8 },
+    { name: "Y. Sabaly", nationality: "SEN", points: 8 },
     { name: "Pedro Miguel", nationality: "QAT", points: 6 },
-    { name: "Khoukhi", nationality: "QAT", points: 6 },
-    { name: "Vitória", nationality: "CAN", points: 5 },
+    { name: "Boualem Khoukhi", nationality: "QAT", points: 6 },
+    { name: "S. Vitória", nationality: "CAN", points: 5 },
   ],
   MID: [
-    { name: "Amallah", nationality: "MAR", points: 10 },
-    { name: "Cheshmi", nationality: "IRN", points: 7 },
-    { name: "Mohammed", nationality: "QAT", points: 6 },
+    { name: "S. Amallah", nationality: "MAR", points: 10 },
+    { name: "R. Cheshmi", nationality: "IRN", points: 7 },
+    { name: "Mohammed Muntari", nationality: "QAT", points: 6 },
   ],
   FWD: [
-    { name: "Goodwin", nationality: "AUS", points: 10 },
-    { name: "Muntari", nationality: "QAT", points: 7 },
-    { name: "Estrada", nationality: "ECU", points: 6 },
+    { name: "C. Goodwin", nationality: "AUS", points: 10 },
+    { name: "Mohammed Muntari", nationality: "QAT", points: 7 },
+    { name: "M. Estrada", nationality: "ECU", points: 6 },
   ],
 };
 
@@ -38,28 +40,136 @@ const positionColors: Record<string, string> = {
   FWD: "#C8402A",
 };
 
-function PlayerCard({ player, position }: { player: { name: string; nationality: string; points: number }; position: string }) {
+const nationalityToCode: Record<string, string> = {
+  "JPN": "jp", "SEN": "sn", "QAT": "qa", "CAN": "ca",
+  "MAR": "ma", "IRN": "ir", "AUS": "au", "ECU": "ec",
+  "FRA": "fr", "ARG": "ar", "ENG": "gb-eng", "GER": "de",
+  "BRA": "br", "ESP": "es", "POR": "pt", "NED": "nl",
+  "BEL": "be", "CRO": "hr", "URU": "uy", "SUI": "ch",
+  "DEN": "dk", "KOR": "kr", "USA": "us", "MEX": "mx",
+  "POL": "pl", "SRB": "rs", "CMR": "cm", "GHA": "gh",
+  "TUN": "tn", "KSA": "sa", "CRC": "cr", "WAL": "gb-wls",
+  "Japan": "jp", "Senegal": "sn", "Qatar": "qa", "Canada": "ca",
+  "Morocco": "ma", "Iran": "ir", "Australia": "au", "Ecuador": "ec",
+  "France": "fr", "Argentina": "ar", "England": "gb-eng", "Germany": "de",
+  "Brazil": "br", "Spain": "es", "Portugal": "pt", "Netherlands": "nl",
+};
+
+function PlayerCard({ player, position}: {
+  player: { name: string; nationality: string; points: number; photo?: string };
+  position: string;
+}) {
+  const countryCode = nationalityToCode[player.nationality] || "un";
+  const [tooltip, setTooltip] = useState<{ x: number; y: number } | null>(null);
+
   return (
-    <div className="player-card">
-      <div
-        className="card-inner"
-        style={{ borderColor: positionColors[position] }}
-      >
+    <div
+      className="player-card"
+      style={{ position: "relative" }}
+      onMouseEnter={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setTooltip({ x: rect.left + rect.width / 2, y: rect.top });
+      }}
+      onMouseLeave={() => setTooltip(null)}
+    >
+      <div className="card-inner" style={{ borderColor: positionColors[position] }}>
         <div className="card-top" style={{ backgroundColor: positionColors[position] }} />
         <span className="card-position" style={{ color: positionColors[position] }}>
           {position}
         </span>
         <div className="card-avatar" style={{ backgroundColor: positionColors[position] }}>
-          {player.nationality}
+          <img
+            src={`https://flagcdn.com/w40/${countryCode}.png`}
+            alt={player.nationality}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
+          />
         </div>
         <span className="card-name">{player.name.split(" ").pop()}</span>
         <span className="card-pts">{player.points} pts</span>
       </div>
+
+      {tooltip && (
+        <div
+          style={{
+            position: "fixed",
+            left: `${tooltip.x}px`,
+            top: `${tooltip.y - 8}px`,
+            transform: "translate(-50%, -100%)",
+            zIndex: 9999,
+            backgroundColor: "var(--card-bg)",
+            border: `2px solid ${positionColors[position]}`,
+            borderRadius: "12px",
+            padding: "12px",
+            width: "140px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+            pointerEvents: "none",
+          }}
+        >
+          <div style={{
+            height: "4px",
+            borderRadius: "10px 10px 0 0",
+            backgroundColor: positionColors[position],
+            margin: "-12px -12px 8px -12px",
+          }} />
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+            <img
+              src={`https://flagcdn.com/w40/${countryCode}.png`}
+              alt={player.nationality}
+              style={{ width: "28px", height: "18px", objectFit: "cover", borderRadius: "2px" }}
+            />
+            <span style={{
+              fontFamily: "Bebas Neue, sans-serif",
+              fontSize: "0.65rem",
+              color: positionColors[position],
+              letterSpacing: "0.08em"
+            }}>
+              {position}
+            </span>
+          </div>
+          <p style={{
+            fontFamily: "Bebas Neue, sans-serif",
+            fontSize: "1rem",
+            letterSpacing: "0.05em",
+            marginBottom: "4px",
+            lineHeight: 1.2
+          }}>
+            {player.name}
+          </p>
+          <p style={{
+            fontSize: "0.7rem",
+            color: "var(--ink-muted)",
+            fontFamily: "DM Sans, sans-serif",
+            marginBottom: "8px"
+          }}>
+            {player.nationality}
+          </p>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "6px 8px",
+            borderRadius: "6px",
+            backgroundColor: positionColors[position],
+          }}>
+            <span style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.65rem", fontFamily: "DM Sans, sans-serif" }}>
+              Fantasy pts
+            </span>
+            <span style={{
+              color: "white",
+              fontFamily: "Bebas Neue, sans-serif",
+              fontSize: "1.1rem"
+            }}>
+              {player.points}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function PitchView() {
+function PitchView({ playersMap }: { playersMap: Record<string, string> }) {
   return (
     <div className="pitch">
       <div className="pitch-markings">
@@ -70,22 +180,22 @@ function PitchView() {
       </div>
       <div className="pitch-row">
         {DEMO_LINEUP.FWD.map((p, i) => (
-          <PlayerCard key={i} player={p} position="FWD" />
+          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="FWD"/>
         ))}
       </div>
       <div className="pitch-row">
         {DEMO_LINEUP.MID.map((p, i) => (
-          <PlayerCard key={i} player={p} position="MID" />
+          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="MID"/>
         ))}
       </div>
       <div className="pitch-row">
         {DEMO_LINEUP.DEF.map((p, i) => (
-          <PlayerCard key={i} player={p} position="DEF" />
+          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="DEF"/>
         ))}
       </div>
       <div className="pitch-row">
-        {DEMO_LINEUP.GK.map((p, i) => (
-          <PlayerCard key={i} player={p} position="GK" />
+       {DEMO_LINEUP.GK.map((p, i) => (
+          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="GK"/>
         ))}
       </div>
       <div className="formation-badge">4-3-3</div>
@@ -159,6 +269,70 @@ function AgentChat() {
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("team");
+  const [topPerformers, setTopPerformers] = useState(TOP_PERFORMERS);
+  const [loadingData, setLoadingData] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/api/top-performers");
+        const data = await response.json();
+        if (data.stats && data.stats.length > 0) {
+          const mapped = data.stats.slice(0, 5).map((p: any) => ({
+            name: p.player_name,
+            team: `${p.total_goals}G · ${p.total_assists}A · ${p.matches_played} games`,
+            points: p.total_points,
+            goals: p.total_goals,
+            assists: p.total_assists,
+          }));
+          setTopPerformers(mapped);
+        }
+      } catch {
+        console.log("Using demo data");
+      } finally {
+        setLoadingData(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const [lineup, setLineup] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchLineup = async () => {
+      try {
+        const response = await fetch("/api/lineup/luan?matchday=1");
+        const data = await response.json();
+        if (data.lineup) {
+          setLineup(data.lineup);
+        }
+      } catch {
+        console.log("Using demo lineup");
+      }
+    };
+    fetchLineup();
+  }, []);
+
+  const [playersMap, setPlayersMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchPlayers = async () => {
+      try {
+        const response = await fetch("/api/players");
+        const data = await response.json();
+        if (data.players) {
+          const map: Record<string, string> = {};
+          data.players.forEach((p: any) => {
+            map[p.name] = p.photo;
+          });
+          setPlayersMap(map);
+        }
+      } catch {
+        console.log("Could not load player photos");
+      }
+    };
+    fetchPlayers();
+  }, []);
 
   return (
     <div className="app">
@@ -220,7 +394,7 @@ export default function Home() {
                 <h2 className="section-title">MY SQUAD</h2>
                 <span className="section-sub">Matchday 1 · 4-3-3</span>
               </div>
-              <PitchView />
+              <PitchView playersMap={playersMap} />
             </div>
             <div className="chat-section">
               <h2 className="section-title" style={{ marginBottom: "1rem" }}>COACH AI</h2>
@@ -234,8 +408,13 @@ export default function Home() {
             <h2 className="section-title" style={{ marginBottom: "1.5rem" }}>
               TOP PERFORMERS · 2022 WORLD CUP
             </h2>
-            <div className="performers-grid">
-              {TOP_PERFORMERS.map((player, i) => (
+            {loadingData ? (
+              <div style={{ color: "var(--ink-muted)", fontFamily: "DM Sans, sans-serif" }}>
+                Loading player data...
+              </div>
+            ) : (
+              <div className="performers-grid">
+              {topPerformers.map((player, i) => (
                 <div key={i} className="performer-card">
                   <div className="performer-top">
                     <div>
@@ -259,7 +438,8 @@ export default function Home() {
                   </div>
                 </div>
               ))}
-            </div>
+            </div>  
+            )}
           </div>
         )}
 

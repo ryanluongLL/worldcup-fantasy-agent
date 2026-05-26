@@ -98,3 +98,21 @@ async def get_standings():
 async def get_top_performers(limit: int = 10):
     from tools.mongodb_tools import get_player_stats
     return get_player_stats(limit=limit)
+
+@app.get("/players")
+async def get_players(position: str = None, limit: int = 60):
+    from database.schema import get_database
+    db = get_database()
+    query = {}
+    if position:
+        query["position"] = position
+    players = list(db.players.find(query, {
+       "_id": 0,
+        "api_id": 1,
+        "name": 1,
+        "nationality": 1,
+        "position": 1,
+        "photo": 1,
+        "club": 1
+    }).limit(limit))
+    return {"playeres": players}

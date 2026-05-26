@@ -276,12 +276,13 @@ body {
   margin-top: 4px;
 }
 .card-avatar {
-  width: 28px; height: 28px;
-  border-radius: 50%;
+  width: 36px; height: 24px;
+  border-radius: 3px;
   display: flex; align-items: center; justify-content: center;
   color: white;
   font-size: 8px;
   font-weight: bold;
+  overflow: hidden;
 }
 .card-name {
   font-family: "Bebas Neue", sans-serif;
