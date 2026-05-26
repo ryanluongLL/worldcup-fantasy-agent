@@ -22,7 +22,8 @@ async def test():
 
     message = Content(
         role="user",
-        parts=[Part(text="Predict the match between France and Argentina. Also show me the top 5 teams in the tournament standings.")]
+        parts=[Part(text="Show me the current 2026 World Cup standings and top scorers.")]
+
 
     )
 

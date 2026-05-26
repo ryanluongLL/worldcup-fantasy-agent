@@ -230,10 +230,119 @@ def get_tournament_standings() -> dict:
         "total_teams": len(standings)
     }
 
+def get_live_2026_standings() -> dict:
+    """Get current 2026 World Cup group standings from the live API.
+    
+    Returns:
+        Dictionary with current group standings for all 12 groups.
+    """
+    import requests
+    from pathlib import Path
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).parent.parent / ".env")
+
+    headers = {"x-apisports-key": os.getenv("API_FOOTBALL_KEY")}
+    base_url = os.getenv("API_FOOTBALL_BASE_URL")
+
+    response = requests.get(
+        f"{base_url}/standings",
+        headers=headers,
+        params={"league": 1, "season": 2026}
+    )
+
+    data = response.json()
+
+    if not data["response"]:
+        return {"status": "error", "message": "No 2026 standings available yet"}
+
+    groups = []
+    standings = data["response"][0]["league"]["standings"]
+
+    for group in standings:
+        group_name = group[0]["group"]
+        teams = []
+        for team in group:
+            teams.append({
+                "rank": team["rank"],
+                "team": team["team"]["name"],
+                "played": team["all"]["played"],
+                "won": team["all"]["win"],
+                "drawn": team["all"]["draw"],
+                "lost": team["all"]["lose"],
+                "goals_for": team["all"]["goals"]["for"],
+                "goals_against": team["all"]["goals"]["against"],
+                "goal_difference": team["goalsDiff"],
+                "points": team["points"],
+                "form": team["form"]
+            })
+        groups.append({
+            "group": group_name,
+            "teams": teams
+        })
+        
+        return{
+            "season": 2026,
+            "total_groups": len(groups),
+            "groups": groups
+        }
+
+def get_live_2026_top_scorers() -> dict:
+    """Get current 2026 World Cup top scorers from the live API.
+
+    Returns:
+        Dictionary with current top scorers and their stats.
+    """
+    import requests
+    from pathlib import Path
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).parent.parent / ".env")
+
+    headers={"x-apisports-key": os.getenv("API_FOOTBALL_KEY")}
+    base_url = os.getenv("API_FOOTBALL_BASE_URL")
+
+    response = requests.get(
+        f"{base_url}/players/topscorers",
+        headers=headers,
+        params={"league": 1, "season": 2026}
+    )
+
+    data = response.json()
+
+    if not data["response"]:
+        return{
+            "status": "pre_tournament",
+            "message": "Tournament starts June 11 2026. No goals scored yet.",
+            "season" : 2026
+        }
+    
+    scores = []
+    for entry in data["response"]:
+        player = entry["player"]
+        stats = entry["statistics"][0]
+        scores.append({
+            "name": player["name"],
+            "nationality": player["nationality"],
+            "age": player["age"],
+            "goals": stats["goals"]["total"],
+            "assists": stats["goals"]["assists"],
+            "appearences": stats["games"]["appearences"],
+            "minute": stats["games"]["minutes"],
+            "team": stats["team"]["name"]
+        })
+
+    return{
+        "season": 2026,
+        "top_scorers": scores,
+        "count": len(scores)
+    }
+
+    
+
 get_team_stats_tool = FunctionTool(get_team_stats)
 predict_match_tool = FunctionTool(predict_match)
 get_tournament_standings_tool = FunctionTool(get_tournament_standings)
-
+get_live_2026_standings_tool = FunctionTool(get_live_2026_standings)
+get_live_2026_top_scorers_tool = FunctionTool(get_live_2026_top_scorers)
 
 
           

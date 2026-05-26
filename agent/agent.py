@@ -26,7 +26,9 @@ from tools.mongodb_tools import (
 from tools.prediction_engine import (
     get_team_stats_tool,
     predict_match_tool,
-    get_tournament_standings_tool
+    get_tournament_standings_tool,
+    get_live_2026_standings_tool,
+    get_live_2026_top_scorers_tool
 )
 
 def create_agent():
@@ -55,6 +57,8 @@ def create_agent():
         - get_team_stats: analyze a team's attack, defense, and win rate
         - predict_match: predict outcome between two teams with probabilities
         - get_tournament_standings: get overall tournament table
+        - get_live_2026_standings: get current 2026 World Cup group standings
+        - get_live_2026_top_scorers: get current 2026 World Cup top scorers
 
         CRITICAL RULES:
         1. ALWAYS call the appropriate tool before answering any question about players, 
@@ -98,6 +102,8 @@ def create_agent():
             get_team_stats_tool,
             predict_match_tool,
             get_tournament_standings_tool,
+            get_live_2026_standings_tool,
+            get_live_2026_top_scorers_tool,
         ]
     )
     return agent
