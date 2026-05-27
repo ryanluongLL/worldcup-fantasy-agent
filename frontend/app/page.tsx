@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Trophy, TrendingUp, Users, Zap, Star } from "lucide-react";
 
 const RAILWAY_URL = "https://worldcup-fantasy-agent-production.up.railway.app";
@@ -261,6 +261,11 @@ function AgentChat({ onLineupUpdate }: { onLineupUpdate: (lineup: any) => void }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -310,6 +315,7 @@ function AgentChat({ onLineupUpdate }: { onLineupUpdate: (lineup: any) => void }
             <div className="bubble muted">Analyzing... (this may take 30-60 seconds)</div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
       <div className="chat-input-row">
         <input
@@ -361,37 +367,31 @@ export default function Home() {
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
-        const response = await fetch(`${RAILWAY_URL}/players`);
+        const response = await fetch(`${RAILWAY_URL}/player-stats-map`);
         const data = await response.json();
-        if (data.players) {
+        if (data.players_map) {
           const photoMap: Record<string, string> = {};
           const positionMap: Record<string, string> = {};
           const nationalityMap: Record<string, string> = {};
-         data.players.forEach((p: any) => {
-            photoMap[p.name] = p.photo;
-            positionMap[p.name] = p.position;
-            nationalityMap[p.name] = p.nationality;
 
-            if (p.firstname && p.lastname) {
-              const fullName = `${p.firstname} ${p.lastname}`;
-              photoMap[fullName] = p.photo;
-              positionMap[fullName] = p.position;
-              nationalityMap[fullName] = p.nationality;
+          Object.entries(data.players_map).forEach(([fullName, info]: [string, any]) => {
+            photoMap[fullName] = info.photo;
+            positionMap[fullName] = info.position;
+            nationalityMap[fullName] = info.nationality;
 
-              // Normalized version without accents
-              const normalizedName = fullName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-              photoMap[normalizedName] = p.photo;
-              positionMap[normalizedName] = p.position;
-              nationalityMap[normalizedName] = p.nationality;
-            }
-           
-            const lastName = p.name.split(" ").pop() || "";
+            const normalized = fullName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            photoMap[normalized] = info.photo;
+            positionMap[normalized] = info.position;
+            nationalityMap[normalized] = info.nationality;
+
+            const lastName = fullName.split(" ").pop() || "";
             if (!positionMap[lastName]) {
-              positionMap[lastName] = p.position;
-              nationalityMap[lastName] = p.nationality;
-              photoMap[lastName] = p.photo;
+              positionMap[lastName] = info.position;
+              nationalityMap[lastName] = info.nationality;
+              photoMap[lastName] = info.photo;
             }
           });
+
           setPlayersMap(photoMap);
           setPlayerPositionMap(positionMap);
           setPlayerNationalityMap(nationalityMap);
