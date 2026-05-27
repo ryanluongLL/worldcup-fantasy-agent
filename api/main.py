@@ -1,16 +1,29 @@
 import os
-import asyncio
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from dotenv import load_dotenv
+
+import json
+import tempfile
 
 load_dotenv()
 
-os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("GOOGLE_CLOUD_PROJECT")
-os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv("GOOGLE_CLOUD_LOCATION", "us-east4")
-os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
+credentials_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+if credentials_json:
+    try:
+        creds_dict = json.loads(credentials_json)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(creds_dict, f)
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = f.name
+    except Exception as e:
+        print(f"Failed to load credentials: {e}")
 
+os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
+os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("GOOGLE_CLOUD_PROJECT", "fluid-booking-496802-d8")
+os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv("GOOGLE_CLOUD_LOCATION", "us-east4")
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from google.adk.runners import InMemoryRunner
 from google.genai.types import Content, Part
 from agent.agent import root_agent
@@ -19,8 +32,8 @@ app = FastAPI(title="Pitchside API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -45,7 +58,7 @@ class ChatResponse(BaseModel):
 def health():
     return {"status": "ok", "agent": "pitchside"}
 
-@app.post("/chat", response_model=ChatResponse)
+@app.post("/chat")
 async def chat(request: ChatRequest):
     user_id = request.user_id
 
@@ -74,9 +87,23 @@ async def chat(request: ChatRequest):
             for part in event.content.parts:
                 if hasattr(part, "text") and part.text:
                     response_text += part.text
-    return ChatResponse(
-        response=response_text or "I couldn't process that request. Please try again.",
-        session_id=session_id
+
+    # check if a lineup was saved during this interaction
+    from database.schema import get_database
+    db = get_database()
+    latest_lineup = db.lineups.find_one(
+        {"user_id": user_id},
+        {"_id": 0},
+        sort=[("matchday", -1)]
+    )
+
+    return JSONResponse(
+       content={
+            "response": response_text or "I couldn't process that request.",
+            "session_id": session_id,
+            "lineup": latest_lineup
+       },
+       headers={"Access-Control-Allow-Origin": "*"}
     )
 
 @app.get("/lineup/{user_id}")
@@ -98,3 +125,52 @@ async def get_standings():
 async def get_top_performers(limit: int = 10):
     from tools.mongodb_tools import get_player_stats
     return get_player_stats(limit=limit)
+
+@app.get("/players")
+async def get_players(position: str = None, limit: int = 60):
+    from database.schema import get_database
+    db = get_database()
+    query = {}
+    if position:
+        query["position"] = position
+    players = list(db.players.find(query, {
+       "_id": 0,
+        "api_id": 1,
+        "name": 1,
+        "nationality": 1,
+        "position": 1,
+        "photo": 1,
+        "club": 1
+    }).limit(limit))
+    return {"players": players}
+
+@app.get("/player-stats-map")
+async def get_player_stats_map():
+    from database.schema import get_database
+    db = get_database()
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$api_player_id",
+                "player_name": {"$first": "$player_name"},
+            }
+        },
+        {"$limit": 500}
+    ]
+    stats_players = list(db.player_stats.aggregate(pipeline))
+    
+    players_map = {}
+    for sp in stats_players:
+        db_player = db.players.find_one(
+            {"api_id": sp["_id"]},
+            {"position": 1, "nationality": 1, "photo": 1, "name": 1}
+        )
+        if db_player:
+            players_map[sp["player_name"]] = {
+                "position": db_player.get("position", "MID"),
+                "nationality": db_player.get("nationality", "?"),
+                "photo": db_player.get("photo", ""),
+                "db_name": db_player.get("name", "")
+            }
+    
+    return {"players_map": players_map}

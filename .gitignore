@@ -54,3 +54,4 @@ logs/
 # MCP config
 mcp_config.jsonfrontend/.next/
 frontend/node_modules/
+service-account.json

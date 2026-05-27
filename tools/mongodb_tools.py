@@ -97,13 +97,13 @@ def get_matchdays() -> dict:
 def save_lineup(
     user_id: str,
     matchday: int,
-    starters: list,
-    bench: list,
+    starters: list[str],
+    bench: list[str],
     formation: str,
     reasoning: str,
 ) -> dict:
     """Save a fantasy lineup for a user.
-
+    
     Args:
         user_id: The user's identifier.
         matchday: The matchday number.
@@ -111,7 +111,7 @@ def save_lineup(
         bench: List of 4 bench player names.
         formation: Formation string like 4-3-3.
         reasoning: Agent's reasoning for this lineup.
-
+    
     Returns:
         Dictionary confirming the save.
     """
