@@ -143,3 +143,34 @@ async def get_players(position: str = None, limit: int = 60):
         "club": 1
     }).limit(limit))
     return {"players": players}
+
+@app.get("/player-stats-map")
+async def get_player_stats_map():
+    from database.schema import get_database
+    db = get_database()
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$api_player_id",
+                "player_name": {"$first": "$player_name"},
+            }
+        },
+        {"$limit": 500}
+    ]
+    stats_players = list(db.player_stats.aggregate(pipeline))
+    
+    players_map = {}
+    for sp in stats_players:
+        db_player = db.players.find_one(
+            {"api_id": sp["_id"]},
+            {"position": 1, "nationality": 1, "photo": 1, "name": 1}
+        )
+        if db_player:
+            players_map[sp["player_name"]] = {
+                "position": db_player.get("position", "MID"),
+                "nationality": db_player.get("nationality", "?"),
+                "photo": db_player.get("photo", ""),
+                "db_name": db_player.get("name", "")
+            }
+    
+    return {"players_map": players_map}

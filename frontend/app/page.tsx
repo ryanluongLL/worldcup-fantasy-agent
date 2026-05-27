@@ -183,10 +183,14 @@ function PitchView({ playersMap, agentLineup, playerPositionMap, playerNationali
     const byPosition: Record<string, any[]> = { GK: [], DEF: [], MID: [], FWD: [] };
 
     starters.forEach((name: string) => {
-      const position = playerPositionMap[name] || "MID";
-      const nationality = playerNationalityMap[name] || "?";
+      const normalizedName = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const lastName = name.split(" ").pop() || "";
+      const position = playerPositionMap[name] || playerPositionMap[normalizedName] || playerPositionMap[lastName] || "MID";
+      const nationality = playerNationalityMap[name] || playerNationalityMap[normalizedName] || playerNationalityMap[lastName] || "?";
+      const photo = playersMap[name] || playersMap[normalizedName] || playersMap[lastName];
+
       if (byPosition[position]) {
-        byPosition[position].push({ name, nationality, points: 0 });
+        byPosition[position].push({ name, nationality, points: 0, photo });
       }
     });
 
@@ -228,22 +232,22 @@ function PitchView({ playersMap, agentLineup, playerPositionMap, playerNationali
       )}
       <div className="pitch-row">
         {lineup.FWD.map((p, i) => (
-          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="FWD" />
+          <PlayerCard key={i} player={{ ...p}} position="FWD" />
         ))}
       </div>
       <div className="pitch-row">
         {lineup.MID.map((p, i) => (
-          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="MID" />
+          <PlayerCard key={i} player={{ ...p}} position="MID" />
         ))}
       </div>
       <div className="pitch-row">
         {lineup.DEF.map((p, i) => (
-          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="DEF" />
+          <PlayerCard key={i} player={{ ...p}} position="DEF" />
         ))}
       </div>
       <div className="pitch-row">
         {lineup.GK.map((p, i) => (
-          <PlayerCard key={i} player={{ ...p, photo: playersMap[p.name] }} position="GK" />
+          <PlayerCard key={i} player={{ ...p}} position="GK" />
         ))}
       </div>
       <div className="formation-badge">{agentLineup?.formation || "4-3-3"}</div>
@@ -363,15 +367,29 @@ export default function Home() {
           const photoMap: Record<string, string> = {};
           const positionMap: Record<string, string> = {};
           const nationalityMap: Record<string, string> = {};
-          data.players.forEach((p: any) => {
+         data.players.forEach((p: any) => {
             photoMap[p.name] = p.photo;
             positionMap[p.name] = p.position;
             nationalityMap[p.name] = p.nationality;
+
             if (p.firstname && p.lastname) {
               const fullName = `${p.firstname} ${p.lastname}`;
               photoMap[fullName] = p.photo;
               positionMap[fullName] = p.position;
               nationalityMap[fullName] = p.nationality;
+
+              // Normalized version without accents
+              const normalizedName = fullName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              photoMap[normalizedName] = p.photo;
+              positionMap[normalizedName] = p.position;
+              nationalityMap[normalizedName] = p.nationality;
+            }
+           
+            const lastName = p.name.split(" ").pop() || "";
+            if (!positionMap[lastName]) {
+              positionMap[lastName] = p.position;
+              nationalityMap[lastName] = p.nationality;
+              photoMap[lastName] = p.photo;
             }
           });
           setPlayersMap(photoMap);
